@@ -1,7 +1,10 @@
 import os
 
 from flask import Flask, jsonify, send_from_directory
-import pymysql
+try:
+    import pymysql
+except ModuleNotFoundError:
+    pymysql = None
 
 app = Flask(__name__, static_folder='.')
 
@@ -16,6 +19,9 @@ DB_CONFIG = {
 
 
 def _db_config() -> dict:
+    if pymysql is None:
+        raise RuntimeError('PyMySQL is not installed. Add it to requirements.txt and rebuild the app.')
+
     return {
         'host': DB_CONFIG['host'],
         'port': DB_CONFIG['port'],

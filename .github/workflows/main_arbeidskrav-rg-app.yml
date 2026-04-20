@@ -67,6 +67,21 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_EFB8ED810E95437BBDCF5DAF81A51004 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_4013FD01DC0643838E70D4B0F67A8ABF }}
 
+      - name: Force build on App Service (install dependencies)
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            RG=$(az webapp list --query "[?name=='arbeidskrav-rg-app'].resourceGroup | [0]" -o tsv)
+            if [ -z "$RG" ]; then
+              echo "Could not find resource group for app 'arbeidskrav-rg-app'."
+              exit 1
+            fi
+
+            az webapp config appsettings set \
+              --name arbeidskrav-rg-app \
+              --resource-group "$RG" \
+              --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true ENABLE_ORYX_BUILD=true
+
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
