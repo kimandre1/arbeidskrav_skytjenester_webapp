@@ -15,7 +15,7 @@ fi
 
 echo "Installing OS packages..."
 sudo apt-get update
-sudo apt-get install -y python3 python3-venv python3-pip
+sudo apt-get install -y python3 python3-venv python3-pip default-mysql-client
 
 echo "Creating virtual environment (.venv) if needed..."
 if [ ! -d ".venv" ]; then
@@ -44,6 +44,13 @@ export DB_USER='${DB_USER}'
 export DB_PASSWORD='${DB_PASSWORD}'
 EOF
 chmod 600 .app_env
+
+echo "Importing exampledb.sql with mysql..."
+MYSQL_PWD="$DB_PASSWORD" mysql \
+  --host="$DB_HOST" \
+  --port="$DB_PORT" \
+  --user="$DB_USER" \
+  --protocol=TCP < exampledb.sql
 
 echo "Writing startup script (start.sh)..."
 cat > start.sh <<'EOF'
