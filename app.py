@@ -22,8 +22,8 @@ def _db_config() -> dict:
     # Defaults target the Ubuntu-accessible database at 10.10.0.99.
     host = os.getenv('DB_HOST', '10.10.0.99')
     port = _env_int('DB_PORT', 3306)
-    user = os.getenv('DB_USER', 'appuser')
-    password = os.getenv('DB_PASSWORD', 'change-me')
+    user = os.getenv('DB_USER', 'testuser')
+    password = os.getenv('DB_PASSWORD', 'StrongPassword!')
     database = os.getenv('DB_NAME', 'exampledb')
 
     return {

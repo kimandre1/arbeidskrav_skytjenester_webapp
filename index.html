@@ -146,8 +146,7 @@
     const tableBody = document.getElementById('tableBody');
     const reloadBtn = document.getElementById('reloadBtn');
 
-    // Prefer backend API; fall back to local sample file for easy testing.
-    const dataUrls = ['/api/example', './example.json'];
+    const apiUrl = '/api/example';
 
     function setStatus(message, error = false) {
       statusEl.textContent = message;
@@ -191,21 +190,21 @@
     }
 
     async function fetchRows() {
-      for (const url of dataUrls) {
-        try {
-          const response = await fetch(url, { headers: { Accept: 'application/json' } });
-          if (!response.ok) {
-            continue;
-          }
+      const response = await fetch(apiUrl, { headers: { Accept: 'application/json' } });
+      let payload = null;
 
-          const payload = await response.json();
-          return { rows: normalizeRows(payload), source: url };
-        } catch {
-          // Try next source.
-        }
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
       }
 
-      throw new Error('No data source available. Add /api/example in backend or keep example.json.');
+      if (!response.ok) {
+        const message = payload && payload.error ? payload.error : `API request failed (${response.status})`;
+        throw new Error(message);
+      }
+
+      return { rows: normalizeRows(payload), source: apiUrl };
     }
 
     async function loadExampleTable() {
