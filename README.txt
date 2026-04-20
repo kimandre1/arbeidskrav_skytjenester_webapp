@@ -1,4 +1,4 @@
-Self-contained app package
+Ubuntu server run guide
 
 Contents:
 - index.html
@@ -6,18 +6,23 @@ Contents:
 - requirements.txt
 - example.json
 
-Run locally:
-1) Create and activate a Python virtual environment
-2) pip install -r requirements.txt
-3) python app.py
-4) Open http://localhost:8000
+Install and run on Ubuntu:
+1) sudo apt update
+2) sudo apt install -y python3 python3-venv python3-pip
+3) python3 -m venv .venv
+4) source .venv/bin/activate
+5) pip install -r requirements.txt
 
-Deploy later to App Service:
-1) Create your App Service resources when ready
-2) Upload the contents of this folder as your app package root
-3) Use startup command: gunicorn --bind=0.0.0.0 --timeout 120 app:app
-4) Set app settings: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+Set database environment variables (default host is already 10.10.0.99):
+1) export DB_HOST=10.10.0.99
+2) export DB_PORT=3306
+3) export DB_NAME=exampledb
+4) export DB_USER=appuser
+5) export DB_PASSWORD='change-me'
 
-API endpoint:
+Run with Gunicorn (recommended):
+1) gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 app:app
+
+Test endpoint:
 - GET /api/example
-This runs: SELECT * FROM example LIMIT 200
+	Runs: SELECT * FROM example LIMIT 200

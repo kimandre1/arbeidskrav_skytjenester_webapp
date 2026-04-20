@@ -1,33 +1,37 @@
 import os
+from pathlib import Path
 
 from flask import Flask, jsonify, send_from_directory
-try:
-    import pymysql
-except ModuleNotFoundError:
-    pymysql = None
+import pymysql
 
-app = Flask(__name__, static_folder='.')
+BASE_DIR = Path(__file__).resolve().parent
 
-# Test-only database settings.
-DB_CONFIG = {
-    'host': '10.10.0.99',
-    'port': 3306,
-    'user': 'appuser',
-    'password': 'change-me',
-    'database': 'exampledb',
-}
+app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path='')
+
+def _env_int(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
 
 
 def _db_config() -> dict:
-    if pymysql is None:
-        raise RuntimeError('PyMySQL is not installed. Add it to requirements.txt and rebuild the app.')
+    # Defaults target the Ubuntu-accessible database at 10.10.0.99.
+    host = os.getenv('DB_HOST', '10.10.0.99')
+    port = _env_int('DB_PORT', 3306)
+    user = os.getenv('DB_USER', 'appuser')
+    password = os.getenv('DB_PASSWORD', 'change-me')
+    database = os.getenv('DB_NAME', 'exampledb')
 
     return {
-        'host': DB_CONFIG['host'],
-        'port': DB_CONFIG['port'],
-        'user': DB_CONFIG['user'],
-        'password': DB_CONFIG['password'],
-        'database': DB_CONFIG['database'],
+        'host': host,
+        'port': port,
+        'user': user,
+        'password': password,
+        'database': database,
         'cursorclass': pymysql.cursors.DictCursor,
         'connect_timeout': 5,
         'read_timeout': 10,
@@ -37,12 +41,12 @@ def _db_config() -> dict:
 
 @app.get('/')
 def home():
-    return send_from_directory('.', 'index.html')
+    return send_from_directory(str(BASE_DIR), 'index.html')
 
 
 @app.get('/example.json')
 def sample_data():
-    return send_from_directory('.', 'example.json')
+    return send_from_directory(str(BASE_DIR), 'example.json')
 
 
 @app.get('/api/example')
@@ -50,6 +54,7 @@ def get_example_table():
     config = _db_config()
 
     query = 'SELECT * FROM example LIMIT 200'
+    connection = None
 
     try:
         connection = pymysql.connect(**config)
