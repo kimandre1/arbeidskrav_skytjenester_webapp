@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Example Table</title>
+  <style>
+    :root {
+      --bg: #f6f8fc;
+      --card: #ffffff;
+      --text: #1f2a44;
+      --muted: #5b6b88;
+      --line: #d9e2f0;
+      --brand: #1e63d6;
+      --brand-soft: #eaf1ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 16px 40px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(14, 31, 53, 0.08);
+      overflow: hidden;
+    }
+
+    .header {
+      padding: 20px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, var(--brand-soft), #ffffff);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .status {
+      padding: 12px 20px;
+      font-size: 14px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .status.error {
+      color: #b42318;
+      background: #fff5f5;
+    }
+
+    .table-wrap {
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 560px;
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      background: #f8fbff;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .actions {
+      padding: 14px 20px;
+      display: flex;
+      justify-content: flex-end;
+      border-top: 1px solid var(--line);
+    }
+
+    button {
+      border: 0;
+      background: var(--brand);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="card">
+      <header class="header">
+        <h1>Table: example</h1>
+        <p>Shows data from a single MySQL table named "example".</p>
+      </header>
+
+      <div id="status" class="status">Loading data...</div>
+
+      <div class="table-wrap">
+        <table>
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="actions">
+        <button id="reloadBtn" type="button">Reload</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const tableHead = document.getElementById('tableHead');
+    const tableBody = document.getElementById('tableBody');
+    const reloadBtn = document.getElementById('reloadBtn');
+
+    // Prefer backend API; fall back to local sample file for easy testing.
+    const dataUrls = ['/api/example', './example.json'];
+
+    function setStatus(message, error = false) {
+      statusEl.textContent = message;
+      statusEl.classList.toggle('error', error);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function normalizeRows(payload) {
+      if (Array.isArray(payload)) {
+        return payload;
+      }
+
+      if (payload && Array.isArray(payload.rows)) {
+        return payload.rows;
+      }
+
+      return [];
+    }
+
+    function renderRows(rows) {
+      if (!rows.length) {
+        tableHead.innerHTML = '';
+        tableBody.innerHTML = '<tr><td colspan="1">No rows found in table "example".</td></tr>';
+        return;
+      }
+
+      const columns = Object.keys(rows[0]);
+      tableHead.innerHTML = `<tr>${columns.map((column) => `<th>${escapeHtml(column)}</th>`).join('')}</tr>`;
+      tableBody.innerHTML = rows.map((row) => {
+        const cells = columns.map((column) => `<td>${escapeHtml(row[column] ?? '')}</td>`).join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
+    }
+
+    async function fetchRows() {
+      for (const url of dataUrls) {
+        try {
+          const response = await fetch(url, { headers: { Accept: 'application/json' } });
+          if (!response.ok) {
+            continue;
+          }
+
+          const payload = await response.json();
+          return { rows: normalizeRows(payload), source: url };
+        } catch {
+          // Try next source.
+        }
+      }
+
+      throw new Error('No data source available. Add /api/example in backend or keep example.json.');
+    }
+
+    async function loadExampleTable() {
+      reloadBtn.disabled = true;
+      setStatus('Loading rows from table "example"...');
+
+      try {
+        const { rows, source } = await fetchRows();
+        renderRows(rows);
+        setStatus(`Loaded ${rows.length} row${rows.length === 1 ? '' : 's'} from "example" (${source}).`);
+      } catch (error) {
+        tableHead.innerHTML = '';
+        tableBody.innerHTML = '';
+        setStatus(error.message, true);
+      } finally {
+        reloadBtn.disabled = false;
+      }
+    }
+
+    reloadBtn.addEventListener('click', loadExampleTable);
+    loadExampleTable();
+  </script>
+</body>
+</html>
